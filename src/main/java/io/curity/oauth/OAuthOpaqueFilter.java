@@ -16,60 +16,51 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonReaderFactory;
-import javax.json.spi.JsonProvider;
-import jakarta.servlet.FilterConfig;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.UnavailableException;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class OAuthOpaqueFilter extends OAuthFilter
-{
-    private static final Logger _logger = Logger.getLogger(OAuthOpaqueFilter.class.getName());
+import com.google.gson.Gson;
 
-    private TokenValidator _opaqueTokenValidator = null;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.UnavailableException;
 
-    private interface InitParams
-    {
-        String SCOPE = "scope";
-    }
+public class OAuthOpaqueFilter extends OAuthFilter {
+	private static final Logger _logger = Logger.getLogger(OAuthOpaqueFilter.class.getName());
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException
-    {
-        super.init(filterConfig);
+	private TokenValidator _opaqueTokenValidator = null;
 
-        synchronized (this)
-        {
-            if (_opaqueTokenValidator == null)
-            {
-                _opaqueTokenValidator = createTokenValidator(getFilterConfiguration());
+	private interface InitParams {
+		String SCOPE = "scope";
+	}
 
-                _logger.info(() -> String.format("%s successfully initialized", OAuthFilter.class.getSimpleName()));
-            }
-            else
-            {
-                _logger.warning("Attempted to set introspect URI more than once! Ignoring further attempts.");
-            }
-        }
-    }
+	@Override
+	public void init(FilterConfig filterConfig) throws ServletException {
+		super.init(filterConfig);
 
-    @Override
-    protected TokenValidator getTokenValidator()
-    {
-        return _opaqueTokenValidator;
-    }
+		synchronized (this) {
+			if (_opaqueTokenValidator == null) {
+				_opaqueTokenValidator = createTokenValidator(getFilterConfiguration());
 
-    @Override
-    protected TokenValidator createTokenValidator(Map<String, ?> initParams) throws UnavailableException
-    {
-        // Like in the OAuthJwtFilter, we'll reuse the config of this filter + the service locator to
-        // get a JsonReaderFactory
-        JsonReaderFactory jsonReaderFactory = JsonProvider.provider().createReaderFactory(initParams);
-        IntrospectionClient introspectionClient = HttpClientProvider.provider()
-                .createIntrospectionClient(initParams);
+				_logger.info(() -> String.format("%s successfully initialized", OAuthFilter.class.getSimpleName()));
+			} else {
+				_logger.warning("Attempted to set introspect URI more than once! Ignoring further attempts.");
+			}
+		}
+	}
 
-        return new OpaqueTokenValidator(introspectionClient, jsonReaderFactory);
-    }
+	@Override
+	protected TokenValidator getTokenValidator() {
+		return _opaqueTokenValidator;
+	}
+
+	@Override
+	protected TokenValidator createTokenValidator(Map<String, ?> initParams) throws UnavailableException {
+		// Like in the OAuthJwtFilter, we'll reuse the config of this filter + the
+		// service locator to
+		// get a JsonReaderFactory
+		IntrospectionClient introspectionClient = HttpClientProvider.provider().createIntrospectionClient(initParams);
+
+		return new OpaqueTokenValidator(introspectionClient, new Gson());
+	}
 }

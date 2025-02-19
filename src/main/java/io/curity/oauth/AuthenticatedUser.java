@@ -16,52 +16,46 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 import java.util.Objects;
 import java.util.Set;
 
-public class AuthenticatedUser
-{
-    private final String _sub;
-    private final Set<String> _scopes;
-    private final JsonData _jsonData;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
-    private AuthenticatedUser(String subject, Set<String> scopes, JsonData jsonData)
-    {
-        _sub = subject;
-        _scopes = scopes;
-        _jsonData = jsonData;
-    }
+public class AuthenticatedUser {
+	private final String _sub;
+	private final Set<String> _scopes;
+	private final JsonData _jsonData;
 
-    public String getSubject()
-    {
-        return _sub;
-    }
+	private AuthenticatedUser(String subject, Set<String> scopes, JsonData jsonData) {
+		_sub = subject;
+		_scopes = scopes;
+		_jsonData = jsonData;
+	}
 
-    public Set<String> getScopes()
-    {
-        return _scopes;
-    }
+	public String getSubject() {
+		return _sub;
+	}
 
-    public JsonValue getClaim(String name)
-    {
-        return _jsonData.getClaim(name);
-    }
+	public Set<String> getScopes() {
+		return _scopes;
+	}
 
-    public JsonObject getClaims()
-    {
-        return _jsonData.getClaims();
-    }
+	public JsonElement getClaim(String name) {
+		return _jsonData.getClaim(name);
+	}
 
-    static AuthenticatedUser from(JsonData tokenData)
-    {
-        Objects.requireNonNull(tokenData);
+	public JsonObject getClaims() {
+		return _jsonData.getClaims();
+	}
 
-        String subject = tokenData.getSubject();
+	static AuthenticatedUser from(JsonData tokenData) {
+		Objects.requireNonNull(tokenData);
 
-        Objects.requireNonNull(subject);
+		String subject = tokenData.getSubject();
 
-        return new AuthenticatedUser(subject, tokenData.getScopes(), tokenData);
-    }
+		Objects.requireNonNull(subject);
+
+		return new AuthenticatedUser(subject, tokenData.getScopes(), tokenData);
+	}
 }

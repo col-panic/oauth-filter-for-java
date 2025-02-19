@@ -16,13 +16,15 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonReaderFactory;
-import javax.json.spi.JsonProvider;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.UnavailableException;
-import java.util.Map;
-import java.util.logging.Logger;
 
 public class OAuthJwtFilter extends OAuthFilter
 {
@@ -69,13 +71,13 @@ public class OAuthJwtFilter extends OAuthFilter
         // Pass all of the filter's config to the ReaderFactory factory method. It'll ignore anything it doesn't
         // understand (per JSR 353). This way, clients can change the provider using the service locator and configure
         // the ReaderFactory using the filter's config.
-        JsonReaderFactory jsonReaderFactory = JsonProvider.provider().createReaderFactory(filterConfig);
+		Gson gson = new GsonBuilder().create();
         WebKeysClient webKeysClient = HttpClientProvider.provider().createWebKeysClient(filterConfig);
         String audience = FilterHelper.getInitParamValue(InitParams.AUDIENCE, filterConfig);
         String issuer = FilterHelper.getInitParamValue(InitParams.ISSUER, filterConfig);
 
         return _jwtValidator = new JwtValidatorWithJwk(_minKidReloadTimeInSeconds, webKeysClient, audience, issuer,
-                jsonReaderFactory);
+				gson);
     }
 
     @Override

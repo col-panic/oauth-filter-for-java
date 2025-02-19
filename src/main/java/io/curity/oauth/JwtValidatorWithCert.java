@@ -16,34 +16,22 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonReaderFactory;
 import java.security.PublicKey;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
 
-final class JwtValidatorWithCert extends AbstractJwtValidator
-{
-    private static final Logger _logger = Logger.getLogger(JwtValidatorWithCert.class.getName());
+final class JwtValidatorWithCert extends AbstractJwtValidator {
 
-    private final Map<String, PublicKey> _keys;
+	private final Map<String, PublicKey> _keys;
 
-    JwtValidatorWithCert(String issuer, String audience, Map<String, PublicKey> publicKeys)
-    {
-        this(issuer, audience, publicKeys, JsonUtils.createDefaultReaderFactory());
-    }
+	JwtValidatorWithCert(String issuer, String audience, Map<String, PublicKey> publicKeys) {
+		super(issuer, audience);
 
-    JwtValidatorWithCert(String issuer, String audience, Map<String, PublicKey> publicKeys,
-                         JsonReaderFactory jsonReaderFactory)
-    {
-        super(issuer, audience, jsonReaderFactory);
-        
-        _keys = publicKeys;
-    }
+		_keys = publicKeys;
+	}
 
-    @Override
-    protected Optional<PublicKey> getPublicKey(JwtHeader jwtHeader)
-    {
-        return Optional.ofNullable(_keys.get(jwtHeader.getString("x5t#S256")));
-    }
+	@Override
+	protected Optional<PublicKey> getPublicKey(JwtHeader jwtHeader) {
+		return Optional.ofNullable(_keys.get(jwtHeader.getString("x5t#S256")));
+	}
 }

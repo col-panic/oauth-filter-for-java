@@ -16,12 +16,8 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.StringReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -33,102 +29,89 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-final class JwkManager implements Closeable
-{
-    private static final Logger _logger = Logger.getLogger(JwkManager.class.getName());
-    private static final String ACCEPT = "Accept";
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
-    private final TimeBasedCache<String, JsonWebKey> _jsonWebKeyByKID;
-    private final WebKeysClient _webKeysClient;
-    private final ScheduledExecutorService _executor = Executors.newSingleThreadScheduledExecutor();
-    private final JsonReaderFactory _jsonReaderFactory;
+final class JwkManager implements Closeable {
+	private static final Logger _logger = Logger.getLogger(JwkManager.class.getName());
 
-    JwkManager(long minKidReloadTimeInSeconds, WebKeysClient webKeysClient, JsonReaderFactory jsonReaderFactory)
-    {
-        _jsonWebKeyByKID = new TimeBasedCache<>(Duration.ofSeconds(minKidReloadTimeInSeconds), this::reload);
-        _webKeysClient = webKeysClient;
-        _jsonReaderFactory = jsonReaderFactory;
+	private final TimeBasedCache<String, JsonWebKey> _jsonWebKeyByKID;
+	private final WebKeysClient _webKeysClient;
+	private final ScheduledExecutorService _executor = Executors.newSingleThreadScheduledExecutor();
+	private final Gson _gson;
 
-        // invalidate the cache periodically to avoid stale state
-        _executor.scheduleAtFixedRate(this::ensureCacheIsFresh, 5, 15, TimeUnit.MINUTES);
-    }
+	JwkManager(long minKidReloadTimeInSeconds, WebKeysClient webKeysClient, Gson gson) {
+		_gson = gson;
+		_jsonWebKeyByKID = new TimeBasedCache<>(Duration.ofSeconds(minKidReloadTimeInSeconds), this::reload);
+		_webKeysClient = webKeysClient;
 
-    /**
-     * checks if the JsonWebKey exists in the local cached, otherwise this
-     * method will call the JsonWebKeyService to get the new keys.
-     *
-     * @param keyId keyId
-     * @return JsonWebKey
-     */
-    JsonWebKey getJsonWebKeyForKeyId(String keyId) throws JsonWebKeyNotFoundException
-    {
-        JsonWebKey key = _jsonWebKeyByKID.get(keyId);
+		// invalidate the cache periodically to avoid stale state
+		_executor.scheduleAtFixedRate(this::ensureCacheIsFresh, 5, 15, TimeUnit.MINUTES);
+	}
 
-        if (key != null)
-        {
-            return key;
-        }
+	/**
+	 * checks if the JsonWebKey exists in the local cached, otherwise this method
+	 * will call the JsonWebKeyService to get the new keys.
+	 *
+	 * @param keyId keyId
+	 * @return JsonWebKey
+	 */
+	JsonWebKey getJsonWebKeyForKeyId(String keyId) throws JsonWebKeyNotFoundException {
+		JsonWebKey key = _jsonWebKeyByKID.get(keyId);
 
-        throw new JsonWebKeyNotFoundException("Json Web Key does not exist: keyid=" + keyId);
-    }
+		if (key != null) {
+			return key;
+		}
 
-    private Map<String, JsonWebKey> reload()
-    {
-        Map<String, JsonWebKey> newKeys = new HashMap<>();
+		throw new JsonWebKeyNotFoundException("Json Web Key does not exist: keyid=" + keyId);
+	}
 
-        try
-        {
-            JwksResponse response = parseJwksResponse(_webKeysClient.getKeys());
+	private Map<String, JsonWebKey> reload() {
+		Map<String, JsonWebKey> newKeys = new HashMap<>();
 
-            for (JsonWebKey key : response.getKeys())
-            {
-                newKeys.put(key.getKeyId(), key);
-            }
+		try {
+			JwksResponse response = parseJwksResponse(_webKeysClient.getKeys());
 
-            _logger.info(() -> String.format("Fetched JsonWebKeys: %s", newKeys));
+			for (JsonWebKey key : response.getKeys()) {
+				newKeys.put(key.getKeyId(), key);
+			}
 
-            return Collections.unmodifiableMap(newKeys);
-        }
-        catch (IOException e)
-        {
-            _logger.log(Level.SEVERE, "Could not contact JWKS Server", e);
+			_logger.info(() -> String.format("Fetched JsonWebKeys: %s", newKeys));
 
-            return Collections.emptyMap();
-        }
-    }
+			return Collections.unmodifiableMap(newKeys);
+		} catch (IOException e) {
+			_logger.log(Level.SEVERE, "Could not contact JWKS Server", e);
 
-    private JwksResponse parseJwksResponse(String response)
-    {
-        JsonReader jsonReader = _jsonReaderFactory.createReader(new StringReader(response));
-        JsonObject jsonObject = jsonReader.readObject();
+			return Collections.emptyMap();
+		}
+	}
 
-        return new JwksResponse(jsonObject);
-    }
+	private JwksResponse parseJwksResponse(String response) {
+		JsonObject jsonObject = _gson.fromJson(response, JsonObject.class);
 
-    private void ensureCacheIsFresh()
-    {
-        _logger.info("Called ensureCacheIsFresh");
+		return new JwksResponse(jsonObject);
+	}
 
-        Instant lastLoading = _jsonWebKeyByKID.getLastReloadInstant().orElse(Instant.MIN);
-        boolean cacheIsNotFresh = lastLoading.isBefore(Instant.now()
-                .minus(_jsonWebKeyByKID.getMinTimeBetweenReloads()));
+	private void ensureCacheIsFresh() {
+		_logger.info("Called ensureCacheIsFresh");
 
-        if (cacheIsNotFresh)
-        {
-            _logger.info("Invalidating JSON WebKeyID cache");
+		Instant lastLoading = _jsonWebKeyByKID.getLastReloadInstant().orElse(Instant.MIN);
+		boolean cacheIsNotFresh = lastLoading
+				.isBefore(Instant.now().minus(_jsonWebKeyByKID.getMinTimeBetweenReloads()));
 
-            _jsonWebKeyByKID.clear();
-        }
-    }
+		if (cacheIsNotFresh) {
+			_logger.info("Invalidating JSON WebKeyID cache");
 
-    @Override
-    public void close() throws IOException
-    {
-        _executor.shutdown();
+			_jsonWebKeyByKID.clear();
+		}
+	}
 
-        if (_webKeysClient instanceof Closeable)
-        {
-            ((Closeable) _webKeysClient).close();
-        }
-    }
+	@Override
+	public void close() throws IOException {
+		_executor.shutdown();
+
+		if (_webKeysClient instanceof Closeable) {
+			((Closeable) _webKeysClient).close();
+		}
+	}
 }

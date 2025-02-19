@@ -16,10 +16,6 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
-import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
@@ -33,221 +29,187 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-abstract class AbstractJwtValidator implements JwtValidator
-{
-    private static final Logger _logger = Logger.getLogger(AbstractJwtValidator.class.getName());
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
-    // Caches with object scope that will ensure that we only decode the same JWT parts once per the lifetime of this
-    // object
-    private final Map<String, JsonObject> _decodedJwtBodyByEncodedBody = new HashMap<>(1);
-    private final Map<String, JwtHeader> _decodedJwtHeaderByEncodedHeader = new HashMap<>(1);
-    private final JsonReaderFactory _jsonReaderFactory;
-    private final String _audience;
-    private final String _issuer;
+abstract class AbstractJwtValidator implements JwtValidator {
+	private static final Logger _logger = Logger.getLogger(AbstractJwtValidator.class.getName());
 
-    AbstractJwtValidator(String issuer, String audience, JsonReaderFactory jsonReaderFactory)
-    {
-        _issuer = issuer;
-        _audience = audience;
-        _jsonReaderFactory = jsonReaderFactory;
-    }
+	// Caches with object scope that will ensure that we only decode the same JWT
+	// parts once per the lifetime of this
+	// object
+	private final Map<String, JsonObject> _decodedJwtBodyByEncodedBody = new HashMap<>(1);
+	private final Map<String, JwtHeader> _decodedJwtHeaderByEncodedHeader = new HashMap<>(1);
+	private final Gson gson = new GsonBuilder().create();
+	private final String _audience;
+	private final String _issuer;
 
-    public final JsonData validate(String jwt) throws TokenValidationException
-    {
-        String[] jwtParts = jwt.split("\\.");
+	AbstractJwtValidator(String issuer, String audience) {
+		_issuer = issuer;
+		_audience = audience;
+	}
 
-        if (jwtParts.length != 3)
-        {
-            throw new InvalidTokenFormatException();
-        }
+	public final JsonData validate(String jwt) throws TokenValidationException {
+		String[] jwtParts = jwt.split("\\.");
 
-        JsonObject jwtBody = decodeJwtBody(jwtParts[1]);
-        JwtHeader jwtHeader = decodeJwtHeader(jwtParts[0]);
-        byte[] jwtSignature = Base64.getUrlDecoder().decode(jwtParts[2]);
-        byte[] headerAndPayload = convertToBytes(jwtParts[0] + "." + jwtParts[1]);
+		if (jwtParts.length != 3) {
+			throw new InvalidTokenFormatException();
+		}
 
-        validateSignature(jwtHeader, jwtSignature, headerAndPayload);
+		JsonObject jwtBody = decodeJwtBody(jwtParts[1]);
+		JwtHeader jwtHeader = decodeJwtHeader(jwtParts[0]);
+		byte[] jwtSignature = Base64.getUrlDecoder().decode(jwtParts[2]);
+		byte[] headerAndPayload = convertToBytes(jwtParts[0] + "." + jwtParts[1]);
 
-        try
-        {
-            long exp = JsonUtils.getLong(jwtBody, "exp");
-            long iat = JsonUtils.getLong(jwtBody, "iat");
+		validateSignature(jwtHeader, jwtSignature, headerAndPayload);
 
-            String aud = JsonUtils.getString(jwtBody, "aud");
-            String iss = JsonUtils.getString(jwtBody, "iss");
+		try {
+			long exp = JsonUtils.getLong(jwtBody, "exp");
+			long iat = JsonUtils.getLong(jwtBody, "iat");
 
-            assert aud != null && aud.length() > 0 : "aud claim is not present in JWT";
-            assert iss != null && iss.length() > 0 : "iss claim is not present in JWT";
+			String aud = JsonUtils.getString(jwtBody, "aud");
+			String iss = JsonUtils.getString(jwtBody, "iss");
 
-            if (!aud.equals(_audience))
-            {
-                throw new InvalidAudienceException(_audience, aud);
-            }
+			assert aud != null && aud.length() > 0 : "aud claim is not present in JWT";
+			assert iss != null && iss.length() > 0 : "iss claim is not present in JWT";
 
-            if (!iss.equals(_issuer))
-            {
-                throw new InvalidIssuerException(_issuer, iss);
-            }
+			if (!aud.equals(_audience)) {
+				throw new InvalidAudienceException(_audience, aud);
+			}
 
-            Instant now = Instant.now();
+			if (!iss.equals(_issuer)) {
+				throw new InvalidIssuerException(_issuer, iss);
+			}
 
-            if (now.getEpochSecond() > exp)
-            {
-                throw new ExpiredTokenException();
-            }
+			Instant now = Instant.now();
 
-            if (now.getEpochSecond() < iat)
-            {
-                throw new InvalidIssuanceInstantException();
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.log(Level.INFO, "Could not extract token data", e);
+			if (now.getEpochSecond() > exp) {
+				throw new ExpiredTokenException();
+			}
 
-            throw new InvalidTokenFormatException("Failed to extract data from Token");
-        }
+			if (now.getEpochSecond() < iat) {
+				throw new InvalidIssuanceInstantException();
+			}
+		} catch (Exception e) {
+			_logger.log(Level.INFO, "Could not extract token data", e);
 
-        return new JsonData(jwtBody);
-    }
+			throw new InvalidTokenFormatException("Failed to extract data from Token");
+		}
 
-    private void validateSignature(JwtHeader jwtHeader, byte[] jwtSignatureData,
-                                   byte[] headerAndPayload)
-            throws TokenValidationException
-    {
-        String algorithm = jwtHeader.getAlgorithm();
+		return new JsonData(jwtBody);
+	}
 
-        if (algorithm == null || algorithm.length() <= 0)
-        {
-            throw new MissingAlgorithmException();
-        }
+	private void validateSignature(JwtHeader jwtHeader, byte[] jwtSignatureData, byte[] headerAndPayload)
+			throws TokenValidationException {
+		String algorithm = jwtHeader.getAlgorithm();
 
-        if (canRecognizeAlg(algorithm))
-        {
-            Optional<PublicKey> signatureVerificationKey = getPublicKey(jwtHeader);
+		if (algorithm == null || algorithm.length() <= 0) {
+			throw new MissingAlgorithmException();
+		}
 
-            if (signatureVerificationKey.isEmpty())
-            {
-                _logger.warning("Received token but could not find matching key");
+		if (canRecognizeAlg(algorithm)) {
+			Optional<PublicKey> signatureVerificationKey = getPublicKey(jwtHeader);
 
-                throw new UnknownSignatureVerificationKey();
-            }
+			if (signatureVerificationKey.isEmpty()) {
+				_logger.warning("Received token but could not find matching key");
 
-            if (!verifySignature(algorithm, headerAndPayload, jwtSignatureData, signatureVerificationKey.get()))
-            {
-                throw new InvalidSignatureException();
-            }
-        }
-        else
-        {
-            _logger.warning(() -> String.format("Requested JsonWebKey using unrecognizable alg: %s", algorithm));
+				throw new UnknownSignatureVerificationKey();
+			}
 
-            throw new UnknownAlgorithmException(algorithm);
-        }
-    }
+			if (!verifySignature(algorithm, headerAndPayload, jwtSignatureData, signatureVerificationKey.get())) {
+				throw new InvalidSignatureException();
+			}
+		} else {
+			_logger.warning(() -> String.format("Requested JsonWebKey using unrecognizable alg: %s", algorithm));
 
-    protected abstract Optional<PublicKey> getPublicKey(JwtHeader jwtHeader);
+			throw new UnknownAlgorithmException(algorithm);
+		}
+	}
 
-    /**
-     * Convert base64 to bytes (ASCII)
-     *
-     * @param input input
-     * @return The array of bytes
-     */
-    private byte[] convertToBytes(String input)
-    {
-        byte[] bytes = new byte[input.length()];
+	protected abstract Optional<PublicKey> getPublicKey(JwtHeader jwtHeader);
 
-        for (int i = 0; i < input.length(); i++)
-        {
-            //Convert and treat as ascii.
-            int integer = input.charAt(i);
+	/**
+	 * Convert base64 to bytes (ASCII)
+	 *
+	 * @param input input
+	 * @return The array of bytes
+	 */
+	private byte[] convertToBytes(String input) {
+		byte[] bytes = new byte[input.length()];
 
-            //Since byte is signed in Java we cannot use normal conversion
-            //but must drop it into a byte array and truncate.
-            byte[] rawBytes = ByteBuffer.allocate(4).putInt(integer).array();
-            //Only store the least significant byte (the others should be 0 TODO check)
-            bytes[i] = rawBytes[3];
-        }
+		for (int i = 0; i < input.length(); i++) {
+			// Convert and treat as ascii.
+			int integer = input.charAt(i);
 
-        return bytes;
-    }
+			// Since byte is signed in Java we cannot use normal conversion
+			// but must drop it into a byte array and truncate.
+			byte[] rawBytes = ByteBuffer.allocate(4).putInt(integer).array();
+			// Only store the least significant byte (the others should be 0 TODO check)
+			bytes[i] = rawBytes[3];
+		}
 
-    private boolean verifySignature(String algorithm, byte[] signingInput, byte[] signature, PublicKey publicKey)
-    {
-        try
-        {
-            Signature verifier = switch (algorithm) {
-                case "RS256" -> Signature.getInstance("SHA256withRSA");
-                case "EdDSA" -> Signature.getInstance(((EdECPublicKey) publicKey).getParams().getName());
-                default -> throw new UnknownAlgorithmException(String.format("Unsupported signature algorithm '%s'", algorithm));
-            };
+		return bytes;
+	}
 
-            verifier.initVerify(publicKey);
-            verifier.update(signingInput);
+	private boolean verifySignature(String algorithm, byte[] signingInput, byte[] signature, PublicKey publicKey) {
+		try {
+			Signature verifier = switch (algorithm) {
+			case "RS256" -> Signature.getInstance("SHA256withRSA");
+			case "EdDSA" -> Signature.getInstance(((EdECPublicKey) publicKey).getParams().getName());
+			default ->
+				throw new UnknownAlgorithmException(String.format("Unsupported signature algorithm '%s'", algorithm));
+			};
 
-            return verifier.verify(signature);
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Unable to validate JWT signature", e);
-        }
-    }
+			verifier.initVerify(publicKey);
+			verifier.update(signingInput);
 
-    private boolean canRecognizeAlg(String alg)
-    {
-        return switch (alg) {
-            case "RS256", "EdDSA" -> true;
-            default -> false;
-        };
-    }
+			return verifier.verify(signature);
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to validate JWT signature", e);
+		}
+	}
 
-    private JsonObject decodeJwtBody(String body)
-    {
-        return _decodedJwtBodyByEncodedBody.computeIfAbsent(body, key ->
-        {
-            // TODO: Switch to stream
-            String decodedBody = new String(Base64.getUrlDecoder().decode(body), StandardCharsets.UTF_8);
-            JsonReader jsonBodyReader = _jsonReaderFactory.createReader(new StringReader(decodedBody));
+	private boolean canRecognizeAlg(String alg) {
+		return switch (alg) {
+		case "RS256", "EdDSA" -> true;
+		default -> false;
+		};
+	}
 
-            return jsonBodyReader.readObject();
-        });
-    }
+	private JsonObject decodeJwtBody(String body) {
+		return _decodedJwtBodyByEncodedBody.computeIfAbsent(body, key -> {
+			// TODO: Switch to stream
+			String decodedBody = new String(Base64.getUrlDecoder().decode(body), StandardCharsets.UTF_8);
+			return gson.fromJson(decodedBody, JsonObject.class);
+		});
+	}
 
-    private JwtHeader decodeJwtHeader(String header)
-    {
-        return _decodedJwtHeaderByEncodedHeader.computeIfAbsent(header, key ->
-        {
-            Base64.Decoder base64 = Base64.getDecoder();
-            String decodedHeader = new String(base64.decode(header), StandardCharsets.UTF_8);
-            JsonReader jsonHeaderReader = _jsonReaderFactory.createReader(new StringReader(decodedHeader));
+	private JwtHeader decodeJwtHeader(String header) {
+		return _decodedJwtHeaderByEncodedHeader.computeIfAbsent(header, key -> {
+			Base64.Decoder base64 = Base64.getDecoder();
+			String decodedHeader = new String(base64.decode(header), StandardCharsets.UTF_8);
+			return new JwtHeader(gson.fromJson(decodedHeader, JsonObject.class));
+		});
+	}
 
-            return new JwtHeader(jsonHeaderReader.readObject());
-        });
-    }
+	class JwtHeader {
+		private final JsonObject _jsonObject;
 
-    class JwtHeader
-    {
-        private final JsonObject _jsonObject;
+		JwtHeader(JsonObject jsonObject) {
+			_jsonObject = jsonObject;
+		}
 
-        JwtHeader(JsonObject jsonObject)
-        {
-            _jsonObject = jsonObject;
-        }
+		String getAlgorithm() {
+			return getString("alg");
+		}
 
-        String getAlgorithm()
-        {
-            return getString("alg");
-        }
+		String getKeyId() {
+			return getString("kid");
+		}
 
-        String getKeyId()
-        {
-            return getString("kid");
-        }
-
-        String getString(String name)
-        {
-            return JsonUtils.getString(_jsonObject, name);
-        }
-    }
+		String getString(String name) {
+			return JsonUtils.getString(_jsonObject, name);
+		}
+	}
 }

@@ -16,76 +16,59 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
-import javax.json.JsonString;
-import javax.json.JsonValue;
-import java.util.Optional;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
-class JsonWebKey
-{
-    private final JsonObject _jsonObject;
+class JsonWebKey {
+	private final JsonObject _jsonObject;
 
-    private JsonWebKeyType _keyType;
+	private JsonWebKeyType _keyType;
 
-    JsonWebKey(JsonObject jsonObject)
-    {
-        _jsonObject = jsonObject;
+	JsonWebKey(JsonObject jsonObject) {
+		_jsonObject = jsonObject;
 
-        JsonValue jsonValue = jsonObject.get("kty");
+		JsonElement jsonValue = jsonObject.get("kty");
 
-        _keyType = JsonWebKeyType.from(jsonValue);
-    }
+		_keyType = JsonWebKeyType.from(jsonValue);
+	}
 
-    String getKeyId()
-    {
-        return getString("kid");
-    }
+	String getKeyId() {
+		return getString("kid");
+	}
 
-    JsonWebKeyType getKeyType()
-    {
-        return _keyType;
-    }
+	JsonWebKeyType getKeyType() {
+		return _keyType;
+	}
 
-    String getUse()
-    {
-        return getString("use");
-    }
+	String getUse() {
+		return getString("use");
+	}
 
-    String getXCoordinate()
-    {
-        return getString("x");
-    }
+	String getXCoordinate() {
+		return getString("x");
+	}
 
-    String getYCoordinate()
-    {
-        return getString("y");
-    }
+	String getYCoordinate() {
+		return getString("y");
+	}
 
-    String getEllipticalCurve()
-    {
-        return getString("crv");
-    }
+	String getEllipticalCurve() {
+		return getString("crv");
+	}
 
-    String getModulus()
-    {
-        return getString("n");
-    }
+	String getModulus() {
+		return getString("n");
+	}
 
-    String getExponent()
-    {
-        return getString("e");
-    }
+	String getExponent() {
+		return getString("e");
+	}
 
-    String getAlgorithm()
-    {
-        return getString("alg");
-    }
+	String getAlgorithm() {
+		return getString("alg");
+	}
 
-    private String getString(String name)
-    {
-        return Optional.ofNullable(_jsonObject.get(name))
-                .filter(it -> it.getValueType() == JsonValue.ValueType.STRING)
-                .map(it -> ((JsonString) it).getString())
-                .orElse(null);
-    }
+	private String getString(String name) {
+		return _jsonObject.get(name).getAsString();
+	}
 }

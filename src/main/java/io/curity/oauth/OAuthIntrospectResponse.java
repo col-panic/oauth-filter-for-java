@@ -16,24 +16,20 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
+import com.google.gson.JsonObject;
 
-class OAuthIntrospectResponse
-{
-    private final JsonObject _jsonObject;
+class OAuthIntrospectResponse {
+	private final JsonObject _jsonObject;
 
-    OAuthIntrospectResponse(JsonObject jsonObject)
-    {
-        _jsonObject = jsonObject;
-    }
+	OAuthIntrospectResponse(JsonObject jsonObject) {
+		_jsonObject = jsonObject;
+	}
 
-    boolean isActive()
-    {
-        return _jsonObject.getBoolean("active");
-    }
+	boolean isActive() {
+		return _jsonObject.get("active").getAsBoolean();
+	}
 
-    JsonObject getJsonObject()
-    {
-        return _jsonObject;
-    }
+	JsonObject getJsonObject() {
+		return _jsonObject;
+	}
 }

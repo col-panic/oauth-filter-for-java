@@ -40,3 +40,6 @@ Thumbs.db
 .idea
 *.iml
 
+/bin-test/
+/target-test/
+/test-classes/

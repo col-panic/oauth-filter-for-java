@@ -16,49 +16,39 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonString;
-import javax.json.JsonValue;
 import java.util.logging.Logger;
 
+import com.google.gson.JsonElement;
+
 enum JsonWebKeyType {
-    EC("EC"),
-    OCT("oct"),
-    OKP("OKP"),
-    RSA("RSA"),
-    UNSPECIFIED("UNSPECIFIED");
+	EC("EC"), OCT("oct"), OKP("OKP"), RSA("RSA"), UNSPECIFIED("UNSPECIFIED");
 
-    private static final Logger _logger = Logger.getLogger(JsonWebKeyType.class.getName());
-    String name;
+	private static final Logger _logger = Logger.getLogger(JsonWebKeyType.class.getName());
+	String name;
 
-    JsonWebKeyType(String name) {
-        this.name = name;
-    }
+	JsonWebKeyType(String name) {
+		this.name = name;
+	}
 
-    static JsonWebKeyType from(JsonValue value) {
-        if (value == null || value.toString().length() == 0) {
-            return UNSPECIFIED;
-        }
+	static JsonWebKeyType from(JsonElement value) {
+		if (value == null || value.toString().length() == 0) {
+			return UNSPECIFIED;
+		}
 
-        if (value.getValueType() != JsonValue.ValueType.STRING) {
-            _logger.warning(() -> String.format("Value '%s' is not a string, as required; it is %s",
-                    value, value.getValueType()));
-        }
+		switch (value.getAsString()) {
+		case "RSA":
+			return RSA;
+		case "EC":
+			return EC;
+		case "OKP":
+			return OKP;
+		case "oct":
+			return OCT;
+		default:
 
-        switch (((JsonString) value).getString()) {
-            case "RSA":
-                return RSA;
-            case "EC":
-                return EC;
-            case "OKP":
-                return OKP;
-            case "oct":
-                return OCT;
-            default:
+			_logger.warning(() -> String.format("Unknown enumeration value '%s' given.", value));
 
-                _logger.warning(() -> String.format("Unknown enumeration value '%s' given.", value));
-
-                throw new IllegalArgumentException("value");
-        }
-    }
+			throw new IllegalArgumentException("value");
+		}
+	}
 }
-

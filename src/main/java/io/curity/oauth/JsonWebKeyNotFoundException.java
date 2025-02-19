@@ -20,7 +20,9 @@ import java.io.IOException;
 
 class JsonWebKeyNotFoundException extends IOException
 {
-    JsonWebKeyNotFoundException(String msg)
+	private static final long serialVersionUID = 6941054254935232366L;
+
+	JsonWebKeyNotFoundException(String msg)
     {
         super(msg);
     }

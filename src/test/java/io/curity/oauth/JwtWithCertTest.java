@@ -16,16 +16,10 @@
 
 package io.curity.oauth;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertNotNull;
+import static junit.framework.TestCase.assertTrue;
 
-import javax.json.JsonObject;
-import javax.json.JsonString;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -39,9 +33,16 @@ import java.security.interfaces.EdECPrivateKey;
 import java.util.HashMap;
 import java.util.Map;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertTrue;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import com.google.gson.JsonObject;
 
 @RunWith(Parameterized.class)
 public class JwtWithCertTest
@@ -122,11 +123,11 @@ public class JwtWithCertTest
 
         JsonObject jsonObject = result.getJsonObject();
 
-        assertTrue(jsonObject.containsKey("sub"));
-        assertTrue(jsonObject.containsKey(EXTRA_CLAIM));
+		assertTrue(jsonObject.keySet().contains("sub"));
+		assertTrue(jsonObject.keySet().contains(EXTRA_CLAIM));
 
-        assertEquals(SUBJECT, ((JsonString) jsonObject.get("sub")).getString());
-        assertEquals(EXTRA_CLAIM_VALUE, ((JsonString) jsonObject.get(EXTRA_CLAIM)).getString());
+		assertEquals(SUBJECT, jsonObject.get("sub").getAsString());
+		assertEquals(EXTRA_CLAIM_VALUE, jsonObject.get(EXTRA_CLAIM).getAsString());
     }
 
     /**

@@ -16,12 +16,13 @@
 
 package io.curity.oauth;
 
+import java.io.IOException;
+import java.security.Principal;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.security.Principal;
 
 class AuthenticatedUserRequestWrapper extends HttpServletRequestWrapper
 {
@@ -31,7 +32,6 @@ class AuthenticatedUserRequestWrapper extends HttpServletRequestWrapper
      * @see <a href="https://tools.ietf.org/html/rfc6750">RFC 6750 - The OAuth 2.0 Authorization Framework: Bearer
      * Token Usage</a>
      */
-    @SuppressWarnings("WeakerAccess")
     public static final String OAUTH_AUTH = "OAUTH";
 
     private final HttpServletRequest _request;

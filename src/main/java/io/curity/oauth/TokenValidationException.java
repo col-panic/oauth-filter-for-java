@@ -1,5 +1,4 @@
 /*
- * Copyright (C) 2017 Curity AB.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,9 @@ package io.curity.oauth;
 
 public class TokenValidationException extends Exception
 {
-    public TokenValidationException(String msg)
+	private static final long serialVersionUID = 2986832328622504264L;
+
+	public TokenValidationException(String msg)
     {
         super(msg);
     }

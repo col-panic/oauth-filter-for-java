@@ -16,86 +16,69 @@
 
 package io.curity.oauth;
 
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.StringReader;
 import java.time.Instant;
 import java.util.Optional;
 
-public class OpaqueTokenValidator implements Closeable, TokenValidator
-{
-    private final IntrospectionClient _introspectionClient;
-    private final ExpirationBasedCache<String, JsonData> _tokenCache;
-    private final JsonReaderFactory _jsonReaderFactory;
-    
-    OpaqueTokenValidator(IntrospectionClient introspectionClient, JsonReaderFactory jsonReaderFactory)
-    {
-        _introspectionClient = introspectionClient;
-        _tokenCache = new ExpirationBasedCache<>();
-        _jsonReaderFactory = jsonReaderFactory;
-    }
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
-    public JsonData validate(String token) throws TokenValidationException
-    {
-        Optional<JsonData> cachedValue = _tokenCache.get(token);
+public class OpaqueTokenValidator implements Closeable, TokenValidator {
+	private final IntrospectionClient _introspectionClient;
+	private final ExpirationBasedCache<String, JsonData> _tokenCache;
+	private final Gson _gson;
 
-        if (cachedValue.isPresent())
-        {
-            return cachedValue.get();
-        }
+	OpaqueTokenValidator(IntrospectionClient introspectionClient, Gson gson) {
+		_introspectionClient = introspectionClient;
+		_tokenCache = new ExpirationBasedCache<>();
+		_gson = gson;
+	}
 
-        String introspectJson;
+	public JsonData validate(String token) throws TokenValidationException {
+		Optional<JsonData> cachedValue = _tokenCache.get(token);
 
-        try
-        {
-            introspectJson = _introspectionClient.introspect(token);
-        }
-        catch (Exception e)
-        {
-            // TODO: Add logging
-            throw new TokenValidationException("Failed to introspect token", e);
-        }
+		if (cachedValue.isPresent()) {
+			return cachedValue.get();
+		}
 
-        OAuthIntrospectResponse response = parseIntrospectResponse(introspectJson);
+		String introspectJson;
 
-        if (response.isActive())
-        {
-            JsonData newToken = new JsonData(response.getJsonObject());
+		try {
+			introspectJson = _introspectionClient.introspect(token);
+		} catch (Exception e) {
+			// TODO: Add logging
+			throw new TokenValidationException("Failed to introspect token", e);
+		}
 
-            if (newToken.getExpiresAt().isAfter(Instant.now()))
-            {
-                //Note: If this cache is backed by some persistent storage, the token should be hashed and not stored
-                //      in clear text
-                _tokenCache.put(token, newToken);
+		OAuthIntrospectResponse response = parseIntrospectResponse(introspectJson);
 
-                return newToken;
-            }
-            else
-            {
-                throw new ExpiredTokenException();
-            }
-        }
-        else
-        {
-            throw new RevokedTokenException();
-        }
-    }
+		if (response.isActive()) {
+			JsonData newToken = new JsonData(response.getJsonObject());
 
-    private OAuthIntrospectResponse parseIntrospectResponse(String introspectJson)
-    {
-        JsonReader jsonReader = _jsonReaderFactory.createReader(new StringReader(introspectJson));
-        JsonObject jsonObject = jsonReader.readObject();
+			if (newToken.getExpiresAt().isAfter(Instant.now())) {
+				// Note: If this cache is backed by some persistent storage, the token should be
+				// hashed and not stored
+				// in clear text
+				_tokenCache.put(token, newToken);
 
-        return new OAuthIntrospectResponse(jsonObject);
-    }
+				return newToken;
+			} else {
+				throw new ExpiredTokenException();
+			}
+		} else {
+			throw new RevokedTokenException();
+		}
+	}
 
-    @Override
-    public void close() throws IOException
-    {
-        _introspectionClient.close();
-        _tokenCache.clear();
-    }
+	private OAuthIntrospectResponse parseIntrospectResponse(String introspectJson) {
+		JsonObject jsonObject = _gson.fromJson(introspectJson, JsonObject.class);
+		return new OAuthIntrospectResponse(jsonObject);
+	}
+
+	@Override
+	public void close() throws IOException {
+		_introspectionClient.close();
+		_tokenCache.clear();
+	}
 }

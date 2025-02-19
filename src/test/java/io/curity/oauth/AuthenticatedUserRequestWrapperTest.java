@@ -16,22 +16,23 @@
 
 package io.curity.oauth;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import javax.json.Json;
-import javax.json.JsonObject;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.Collection;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.Collection;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import com.google.gson.JsonObject;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class AuthenticatedUserRequestWrapperTest
 {
@@ -39,7 +40,8 @@ public class AuthenticatedUserRequestWrapperTest
     public void testCanAuthenticate() throws Exception
     {
         // GIVEN: an authenticated user
-        JsonObject json = Json.createObjectBuilder().add("sub", "test-user").build();
+        JsonObject json = new JsonObject();
+		json.addProperty("sub", "test-user");
         JsonData jsonData = new JsonData(json);
         AuthenticatedUser user = AuthenticatedUser.from(jsonData);
 
