@@ -100,7 +100,7 @@ public class JwtWithJwksTest {
 			}
 		}
 	}
-
+	
 	@Test
 	public void testFindAndValidateWithOneJwk() throws Exception {
 		WebKeysClient webKeysClient = mock(WebKeysClient.class);
@@ -137,6 +137,24 @@ public class JwtWithJwksTest {
 		assertEquals(EXTRA_CLAIM_VALUE, jsonObject.get(EXTRA_CLAIM).getAsString());
 	}
 
+	@Test
+	public void testValidContentInTokenAudienceArray() throws Exception {
+		JwtTokenIssuer issuer = new JwtTokenIssuer(ISSUER, _algorithm, getPrivateKey(), _keyId);
+		Map<String, Object> attributes = new HashMap<>();
+		attributes.put(EXTRA_CLAIM, EXTRA_CLAIM_VALUE);
+		_testToken = issuer.issueToken(SUBJECT, AUDIENCE+" bar:audience", EXPIRATION, attributes);
+		
+		WebKeysClient webKeysClient = mock(WebKeysClient.class);
+
+		JwtValidatorWithJwk validator = new JwtValidatorWithJwk(0, webKeysClient, AUDIENCE, ISSUER, new Gson());
+		when(webKeysClient.getKeys()).thenReturn(prepareKeyMap().get(_keyId));
+		_logger.info("test token = {}", _testToken);
+		
+		JsonData validatedToken = validator.validate(_testToken);
+
+		assertNotNull(validatedToken);
+	}
+	
 	/**
 	 * Load the private keymap with the kid and the jwks The map only contains a
 	 * single key

@@ -24,8 +24,10 @@ import java.security.interfaces.EdECPublicKey;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,14 +70,18 @@ abstract class AbstractJwtValidator implements JwtValidator {
 			long exp = JsonUtils.getLong(jwtBody, "exp");
 			long iat = JsonUtils.getLong(jwtBody, "iat");
 
-			String aud = JsonUtils.getString(jwtBody, "aud");
+			Set<String> aud = new HashSet<String>();
+			String _aud = JsonUtils.getString(jwtBody, "aud");
+			Optional.ofNullable(_aud).ifPresent(aud::add);
+			aud.addAll(JsonUtils.getStringSet(jwtBody, "aud"));
+
 			String iss = JsonUtils.getString(jwtBody, "iss");
 
-			assert aud != null && aud.length() > 0 : "aud claim is not present in JWT";
+			assert !aud.isEmpty() : "aud claim is not present in JWT";
 			assert iss != null && iss.length() > 0 : "iss claim is not present in JWT";
 
-			if (!aud.equals(_audience)) {
-				throw new InvalidAudienceException(_audience, aud);
+			if (!aud.contains(_audience)) {
+				throw new InvalidAudienceException(_audience, aud.toString());
 			}
 
 			if (!iss.equals(_issuer)) {

@@ -4,7 +4,6 @@
 [![Availability](https://img.shields.io/badge/availability-source-blue)](https://curity.io/resources/code-examples/status/)
 
 
-
 This project contains a Servlet Filter that authenticates and authorizes requests using OAuth access tokens of various kinds. There are two `OAuthFilter` implementations. `OAuthJwtFilter` and `OAuthOpaqueFilter`. Both implement `jakarta.servlet.Filter`, and can be used to protect APIs built using Java. Depending on the format of the access token, these two concrete implementations can be used in the following manner:
 
 1. If the token is a Json Web Token (JWT) then validate the token using a public key
@@ -13,17 +12,18 @@ This project contains a Servlet Filter that authenticates and authorizes request
 
 An example of how to use this filter can be found in a [separate repository](https://github.com/curityio/example-java-oauth-protected-api).
 
-## FORK INFO
+# FORK INFO
 
-This is a fork of the original repo
+This is a fork of the original repo https://github.com/curityio/oauth-filter-for-java
 
-It updates to version 5 with the following - breaking - changes
+It upgrades to version 5 with the following - breaking - changes
 
 * Fully move to `jakarta.servlet` namespace
 * Change JSON parser to `com.google.gson`
 * Update some dependent libraries
 * Generate OSGi capable `META-INF/MANIFEST.MF`
 * Fix some build warnings
+* The value in JWT `aud` now accepts arrays, as the configured `audience` can be one of multiple allowed
 
 ## Filter Overview
 

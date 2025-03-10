@@ -92,7 +92,7 @@
 								authenticates and authorizes requests using
 								OAuth access tokens of various kinds.</Bundle-Description>
 							<Bundle-Version>${project.version}</Bundle-Version>
-							<Bundle-SymbolicName>oauth-filter</Bundle-SymbolicName>
+							<Bundle-SymbolicName>io.curity.oauth-filter</Bundle-SymbolicName>
 							<DynamicImport-Package>*</DynamicImport-Package>
 							<Extension-Name>${api.package}</Extension-Name>
 							<Implementation-Version>${project.version}</Implementation-Version>
@@ -100,6 +100,11 @@
 							<_versionpolicy>
 								[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
 							<_nodefaultversion>false</_nodefaultversion>
+							<Require-Capability><![CDATA[
+                            osgi.extender;filter:="(&(osgi.extender=osgi.serviceloader.processor)(version>=1.0.0)(!(version>=2.0.0)))";resolution:=optional,
+                            osgi.serviceloader;filter:="(osgi.serviceloader=io.curity.oauth.HttpClientProvider)";osgi.serviceloader="io.curity.oauth.HttpClientProvider";cardinality:=multiple;resolution:=optional,
+                            osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=17))"
+                            ]]></Require-Capability>
 						</instructions>
 					</configuration>
 					<executions>
@@ -170,32 +175,32 @@
 				</configuration>
 			</plugin>
 			<plugin>
-						<groupId>org.cyclonedx</groupId>
-						<artifactId>cyclonedx-maven-plugin</artifactId>
-						<version>2.9.1</version>
-						<executions>
-							<execution>
-								<phase>package</phase>
-								<goals>
-									<goal>makeAggregateBom</goal>
-								</goals>
-							</execution>
-						</executions>
-						<configuration>
-							<projectType>library</projectType>
-							<schemaVersion>1.4</schemaVersion>
-							<includeBomSerialNumber>true</includeBomSerialNumber>
-							<includeCompileScope>true</includeCompileScope>
-							<includeProvidedScope>false</includeProvidedScope>
-							<includeRuntimeScope>true</includeRuntimeScope>
-							<includeSystemScope>true</includeSystemScope>
-							<includeTestScope>false</includeTestScope>
-							<includeLicenseText>false</includeLicenseText>
-							<outputReactorProjects>true</outputReactorProjects>
-							<outputFormat>all</outputFormat>
-							<outputName>CycloneDX-Sbom</outputName>
-						</configuration>
-					</plugin>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
+				<version>2.9.1</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>makeAggregateBom</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<projectType>library</projectType>
+					<schemaVersion>1.4</schemaVersion>
+					<includeBomSerialNumber>true</includeBomSerialNumber>
+					<includeCompileScope>true</includeCompileScope>
+					<includeProvidedScope>false</includeProvidedScope>
+					<includeRuntimeScope>true</includeRuntimeScope>
+					<includeSystemScope>true</includeSystemScope>
+					<includeTestScope>false</includeTestScope>
+					<includeLicenseText>false</includeLicenseText>
+					<outputReactorProjects>true</outputReactorProjects>
+					<outputFormat>all</outputFormat>
+					<outputName>CycloneDX-Sbom</outputName>
+				</configuration>
+			</plugin>
 
 			<plugin>
 				<groupId>org.apache.felix</groupId>
@@ -325,13 +330,24 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-source-plugin</artifactId>
-						<version>3.2.1</version>
+						<version>3.3.1</version>
 						<executions>
 							<execution>
 								<id>attach-sources</id>
 								<goals>
 									<goal>jar-no-fork</goal>
 								</goals>
+								<configuration>
+									<archive>
+										<manifestEntries>
+										<!-- required so source gets recognized-->
+											<Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+											<Bundle-Version>${project.version}</Bundle-Version>
+											<Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${project.version}";roots:="."</Eclipse-SourceBundle>
+											<!-- Other OSGi headers -->
+										</manifestEntries>
+									</archive>
+								</configuration>
 							</execution>
 						</executions>
 					</plugin>
@@ -348,7 +364,7 @@
 							</execution>
 						</executions>
 						<configuration>
-							<source>8</source>
+							<source>17</source>
 						</configuration>
 					</plugin>
 					<plugin>

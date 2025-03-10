@@ -19,6 +19,8 @@ package io.curity.oauth;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,6 +44,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 @RunWith(Parameterized.class)
@@ -109,7 +112,7 @@ public class JwtWithCertTest
 
         assertNotNull(validatedToken);
     }
-
+    
     @Test
     public void testValidContentInToken() throws Exception
     {
@@ -129,6 +132,23 @@ public class JwtWithCertTest
 		assertEquals(SUBJECT, jsonObject.get("sub").getAsString());
 		assertEquals(EXTRA_CLAIM_VALUE, jsonObject.get(EXTRA_CLAIM).getAsString());
     }
+    
+    @Test
+	public void testValidContentInTokenAudienceArray() throws Exception {
+		JwtTokenIssuer issuer = new JwtTokenIssuer(ISSUER, _algorithm, getPrivateKey(), getCertificate());
+		Map<String, Object> attributes = new HashMap<>();
+		attributes.put(EXTRA_CLAIM, EXTRA_CLAIM_VALUE);
+		_testToken = issuer.issueToken(SUBJECT, AUDIENCE+" bar:audience", EXPIRATION, attributes);
+		
+		JwtValidator validator = new JwtValidatorWithCert(ISSUER, AUDIENCE, prepareKeyMap());
+
+        _logger.info("test token = {}", _testToken);
+
+        JsonData validatedToken = validator.validate(_testToken);
+
+        assertNotNull(validatedToken);
+
+	}
 
     /**
      * Load the private Keymap with the x5t256 thumbprint and the public key
